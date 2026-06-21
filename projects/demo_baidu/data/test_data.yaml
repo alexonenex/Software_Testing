@@ -1,0 +1,11 @@
+# 百度搜索测试数据
+
+search_keywords:
+  - "自动化测试"
+  - "Python Selenium"
+  - "pytest 教程"
+
+# 预期结果
+expected:
+  title_contains: "百度"
+  url_contains: "wd"

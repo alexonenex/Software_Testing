@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.edge.options import Options as EdgeOptions
 
-from config.settings import HEADLESS, WINDOW_SIZE
+from core.settings import HEADLESS, WINDOW_SIZE
 
 
 def get_chrome_options() -> ChromeOptions:

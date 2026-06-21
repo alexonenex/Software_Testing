@@ -1,0 +1,17 @@
+# 百度搜索测试项目配置
+project_name: "百度搜索测试"
+project_desc: "百度搜索功能的 UI 自动化测试"
+
+# 被测站点配置
+base_url: "https://www.baidu.com"
+
+# 浏览器配置（覆盖全局配置，留空则使用全局配置）
+browser: ""
+headless: false
+
+# 超时配置（秒，留空则使用全局配置）
+implicit_wait: ""
+page_load_timeout: ""
+
+# 优先级标记
+priority: "p1"

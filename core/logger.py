@@ -3,9 +3,10 @@
 基于 loguru 实现统一的日志管理
 """
 import sys
+import os
 from loguru import logger
 
-from config.settings import LOGS_DIR, LOG_LEVEL, LOG_FORMAT, LOG_ROTATION, LOG_RETENTION
+from core.settings import LOGS_DIR, LOG_LEVEL, LOG_FORMAT, LOG_ROTATION, LOG_RETENTION
 
 
 def setup_logger():
@@ -27,7 +28,7 @@ def setup_logger():
 
     # 全量日志文件
     logger.add(
-        os_path_join(LOGS_DIR, "test_{time:YYYY-MM-DD}.log"),
+        os.path.join(LOGS_DIR, "test_{time:YYYY-MM-DD}.log"),
         level="DEBUG",
         format=LOG_FORMAT,
         rotation=LOG_ROTATION,
@@ -38,7 +39,7 @@ def setup_logger():
 
     # 错误日志单独文件
     logger.add(
-        os_path_join(LOGS_DIR, "error_{time:YYYY-MM-DD}.log"),
+        os.path.join(LOGS_DIR, "error_{time:YYYY-MM-DD}.log"),
         level="ERROR",
         format=LOG_FORMAT,
         rotation=LOG_ROTATION,
@@ -48,12 +49,6 @@ def setup_logger():
     )
 
     return logger
-
-
-def os_path_join(*paths):
-    """兼容路径拼接"""
-    import os
-    return os.path.join(*paths)
 
 
 # 初始化全局日志器

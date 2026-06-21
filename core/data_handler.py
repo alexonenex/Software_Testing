@@ -4,7 +4,8 @@
 """
 import os
 import yaml
-from utils.logger import log
+
+from core.logger import log
 
 
 def load_yaml(file_path: str) -> dict | list:

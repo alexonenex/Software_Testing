@@ -5,17 +5,15 @@ Web 页面基类
 import os
 import time
 
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
     TimeoutException,
-    NoSuchElementException,
     ElementNotInteractableException,
 )
 
-from config.settings import SCREENSHOTS_DIR, IMPLICIT_WAIT
-from utils.logger import log
+from core.settings import SCREENSHOTS_DIR, IMPLICIT_WAIT
+from core.logger import log
 
 
 class BasePage:
@@ -65,7 +63,12 @@ class BasePage:
     # ==================== 元素操作 ====================
 
     def click(self, locator: tuple, timeout: int = None):
-        """点击元素"""
+        """
+        点击元素
+        先等待元素可点击后尝试正常点击；若超时或不可交互则回退到 JS 方式点击
+        :param locator: 定位器元组
+        :param timeout: 超时时间（秒）
+        """
         timeout = timeout or IMPLICIT_WAIT
         try:
             element = WebDriverWait(self.driver, timeout).until(
@@ -73,18 +76,44 @@ class BasePage:
             )
             element.click()
             log.debug(f"点击元素: {locator}")
-        except ElementNotInteractableException:
-            # 尝试 JS 点击
-            self.driver.execute_script("arguments[0].click();", self.find_element(locator))
+        except (ElementNotInteractableException, TimeoutException):
+            # 元素不可点击或超时，回退到 JS 点击
+            log.warning(f"元素不可点击，尝试 JS 方式点击: {locator}")
+            element = self.find_element(locator)
+            self.driver.execute_script("arguments[0].click();", element)
             log.debug(f"JS 点击元素: {locator}")
 
-    def input_text(self, locator: tuple, text: str, clear: bool = True):
-        """输入文本"""
-        element = self.find_element(locator)
-        if clear:
-            element.clear()
-        element.send_keys(text)
-        log.debug(f"输入文本: {locator} -> '{text}'")
+    def input_text(self, locator: tuple, text: str, clear: bool = True, timeout: int = None):
+        """
+        输入文本
+        先等待元素可点击后尝试正常输入；若超时则回退到 JS 方式输入
+        :param locator: 定位器元组
+        :param text: 要输入的文本
+        :param clear: 是否先清空输入框
+        :param timeout: 超时时间（秒）
+        """
+        timeout = timeout or IMPLICIT_WAIT
+        try:
+            element = WebDriverWait(self.driver, timeout).until(
+                EC.element_to_be_clickable(locator)
+            )
+            if clear:
+                element.clear()
+            element.send_keys(text)
+            log.debug(f"输入文本: {locator} -> '{text}'")
+        except TimeoutException:
+            # 元素存在但不可点击（可能被遮挡），回退到 JS 方式
+            log.warning(f"元素不可点击，尝试 JS 方式输入: {locator}")
+            try:
+                element = self.find_element(locator)
+                self.driver.execute_script(
+                    "arguments[0].value = arguments[1];", element, text
+                )
+                log.debug(f"JS 输入文本: {locator} -> '{text}'")
+            except TimeoutException:
+                log.error(f"输入文本失败，元素不存在: {locator}")
+                self.take_screenshot(f"input_timeout_{int(time.time())}")
+                raise
 
     def get_text(self, locator: tuple) -> str:
         """获取元素文本"""
