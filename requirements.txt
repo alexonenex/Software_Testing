@@ -1,0 +1,23 @@
+# ========== 测试框架 ==========
+pytest==8.3.5
+pytest-html==4.1.1
+pytest-rerunfailures==15.1
+pytest-xdist==3.7.0
+allure-pytest==2.13.5
+
+# ========== Web UI 自动化 ==========
+selenium==4.33.0
+webdriver-manager==4.0.2
+
+# ========== 桌面应用自动化 ==========
+pywinauto==0.6.8
+
+# ========== API 测试 ==========
+requests==2.32.4
+
+# ========== 数据驱动 ==========
+PyYAML==6.0.2
+openpyxl==3.1.5
+
+# ========== 日志与工具 ==========
+loguru==0.7.3
