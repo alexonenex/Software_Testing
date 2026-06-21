@@ -20,6 +20,8 @@ def load_test_data():
 
 @allure.feature("百度搜索")
 @allure.story("搜索功能")
+@pytest.mark.web
+@pytest.mark.p1
 class TestBaiduSearch:
     """百度搜索功能测试"""
 
@@ -31,6 +33,7 @@ class TestBaiduSearch:
 
     @allure.title("百度搜索 - 关键词搜索")
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.smoke
     def test_search(self):
         """测试百度搜索功能"""
         log.info("开始执行百度搜索测试")

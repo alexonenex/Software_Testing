@@ -170,6 +170,39 @@
                     <h1>测试结果</h1>
                     <button class="btn btn-primary" onclick="loadResults()">刷新</button>
                 </div>
+                <!-- 筛选栏 -->
+                <div class="filter-bar card">
+                    <div class="filter-group">
+                        <label>项目</label>
+                        <select id="filter-project" onchange="loadResults()">
+                            <option value="">全部项目</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>状态</label>
+                        <select id="filter-status" onchange="loadResults()">
+                            <option value="">全部状态</option>
+                            <option value="passed">通过</option>
+                            <option value="failed">失败</option>
+                            <option value="running">运行中</option>
+                            <option value="timeout">超时</option>
+                            <option value="error">错误</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>开始日期</label>
+                        <input type="date" id="filter-date-from" onchange="loadResults()">
+                    </div>
+                    <div class="filter-group">
+                        <label>结束日期</label>
+                        <input type="date" id="filter-date-to" onchange="loadResults()">
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">清除筛选</button>
+                    </div>
+                </div>
+                <div class="results-meta" id="results-meta"></div>
                 <div class="results-list" id="results-list"></div>
             </div>
         </main>
@@ -227,6 +260,12 @@
         });
 
         function switchPage(page) {
+            // 切走时停止运行中的轮询
+            if (page !== 'runner' && pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+                currentRunId = null;
+            }
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelector(`[data-page="${page}"]`).classList.add('active');
@@ -373,63 +412,119 @@
 
         function pollRunStatus() {
             if (pollTimer) clearInterval(pollTimer);
+            let failCount = 0;
             pollTimer = setInterval(async () => {
-                if (!currentRunId) return;
-                const res = await fetch(`${API}/run/${currentRunId}/status`);
-                const data = await res.json();
+                if (!currentRunId) { clearInterval(pollTimer); return; }
+                try {
+                    const res = await fetch(`${API}/run/${currentRunId}/status`);
+                    if (!res.ok) {
+                        failCount++;
+                        if (failCount > 3) { clearInterval(pollTimer); return; }
+                        return;
+                    }
+                    failCount = 0;
+                    const data = await res.json();
 
-                document.getElementById('run-output').textContent = data.output || '等待输出...';
-                const statusEl = document.getElementById('run-status');
+                    document.getElementById('run-output').textContent = data.output || '等待输出...';
+                    const statusEl = document.getElementById('run-status');
 
-                if (data.status === 'running') {
-                    statusEl.textContent = '运行中';
-                    statusEl.className = 'status-badge status-running';
-                } else if (data.status === 'passed') {
-                    statusEl.textContent = '全部通过';
-                    statusEl.className = 'status-badge status-passed';
-                    clearInterval(pollTimer);
-                } else if (data.status === 'failed') {
-                    statusEl.textContent = '存在失败';
-                    statusEl.className = 'status-badge status-failed';
-                    clearInterval(pollTimer);
-                } else if (data.status === 'timeout') {
-                    statusEl.textContent = '超时';
-                    statusEl.className = 'status-badge status-failed';
-                    clearInterval(pollTimer);
+                    if (data.status === 'running') {
+                        statusEl.textContent = '运行中';
+                        statusEl.className = 'status-badge status-running';
+                    } else if (data.status === 'passed') {
+                        statusEl.textContent = '全部通过';
+                        statusEl.className = 'status-badge status-passed';
+                        clearInterval(pollTimer);
+                    } else if (data.status === 'failed') {
+                        statusEl.textContent = '存在失败';
+                        statusEl.className = 'status-badge status-failed';
+                        clearInterval(pollTimer);
+                    } else if (data.status === 'timeout') {
+                        statusEl.textContent = '超时';
+                        statusEl.className = 'status-badge status-failed';
+                        clearInterval(pollTimer);
+                    }
+
+                    // 自动滚动到底部
+                    const output = document.getElementById('run-output');
+                    output.scrollTop = output.scrollHeight;
+                } catch (e) {
+                    failCount++;
+                    if (failCount > 5) clearInterval(pollTimer);
                 }
-
-                // 自动滚动到底部
-                const output = document.getElementById('run-output');
-                output.scrollTop = output.scrollHeight;
             }, 1000);
         }
 
         // ==================== 测试结果 ====================
         async function loadResults() {
-            const res = await fetch(`${API}/results`);
+            const project = document.getElementById('filter-project').value;
+            const status = document.getElementById('filter-status').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+
+            let params = new URLSearchParams();
+            if (project) params.set('project', project);
+            if (status) params.set('status', status);
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
+
+            const res = await fetch(`${API}/results?${params.toString()}`);
             const data = await res.json();
+
+            // 更新项目筛选下拉选项（仅在首次加载时）
+            const projectSelect = document.getElementById('filter-project');
+            if (data.projects && projectSelect.options.length <= 1) {
+                data.projects.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    projectSelect.appendChild(opt);
+                });
+            }
+
+            // 显示结果统计
+            document.getElementById('results-meta').innerHTML =
+                `<span>共 ${data.total} 条记录</span>` +
+                (project || status || dateFrom || dateTo ? ' <span class="text-muted">(已筛选)</span>' : '');
+
             const list = document.getElementById('results-list');
 
             if (data.results.length === 0) {
-                list.innerHTML = '<div class="empty-state">暂无测试记录，请先运行一次测试</div>';
+                list.innerHTML = '<div class="empty-state">暂无匹配的测试记录</div>';
                 return;
             }
 
             list.innerHTML = data.results.map(r => {
                 const s = r.summary || {};
                 const statusClass = r.status === 'passed' ? 'badge-green' : (r.status === 'running' ? 'badge-blue' : 'badge-red');
+                const passRate = s.total ? Math.round(s.passed / s.total * 100) : 0;
                 return `
                 <div class="result-card card">
                     <div class="result-header">
                         <span class="badge ${statusClass}">${r.status}</span>
                         <span class="result-project">${r.project}</span>
                         <span class="result-time">${r.timestamp}</span>
+                        <div class="result-actions">
+                            <button class="btn btn-sm btn-primary" onclick="viewReport('${r.id}')">查看报告</button>
+                        </div>
                     </div>
                     <div class="result-summary">
-                        ${s.total ? `<span>总计: ${s.total}</span><span class="text-green">通过: ${s.passed}</span><span class="text-red">失败: ${s.failed}</span><span>耗时: ${s.duration}s</span>` : '<span>无统计数据</span>'}
+                        ${s.total ? `<span>总计: ${s.total}</span><span class="text-green">通过: ${s.passed}</span><span class="text-red">失败: ${s.failed}</span><span>通过率: ${passRate}%</span><span>耗时: ${s.duration}s</span>` : '<span>无统计数据</span>'}
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        function viewReport(runId) {
+            window.open(`${API}/results/${runId}/report`, '_blank');
+        }
+
+        function clearFilters() {
+            document.getElementById('filter-project').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            loadResults();
         }
 
         // 初始化

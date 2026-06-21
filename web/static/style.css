@@ -449,6 +449,56 @@ body {
     50% { opacity: 0.6; }
 }
 
+/* ========== 筛选栏 ========== */
+.filter-bar {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 16px 20px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    min-width: 140px;
+    outline: none;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    border-color: var(--primary);
+}
+
+.results-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.text-muted { color: var(--text-muted); }
+
+.result-actions {
+    margin-left: auto;
+}
+
 /* ========== 滚动条 ========== */
 ::-webkit-scrollbar {
     width: 6px;
